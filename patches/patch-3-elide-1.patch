@@ -1,0 +1,16 @@
+diff --git a/Makefile b/Makefile
+index c0f23485..803aa806 100644
+--- a/Makefile
++++ b/Makefile
+@@ -20,7 +20,11 @@ libdir = $(prefix)/lib
+ syslibdir = /lib
+ 
+ MALLOC_DIR = mallocng
++ifeq ($(USE_MIMALLOC),yes)
+ SRC_DIRS = $(addprefix $(srcdir)/,src/* src/malloc/$(MALLOC_DIR) crt ldso $(COMPAT_SRC_DIRS))
++else
++SRC_DIRS = $(addprefix $(srcdir)/,src/* crt ldso $(COMPAT_SRC_DIRS))
++endif
+ BASE_GLOBS = $(addsuffix /*.c,$(SRC_DIRS))
+ ARCH_GLOBS = $(addsuffix /$(ARCH)/*.[csS],$(SRC_DIRS))
+ BASE_SRCS = $(sort $(wildcard $(BASE_GLOBS)))

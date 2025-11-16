@@ -8,6 +8,8 @@
 # Do not make changes here.
 #
 
+USE_MIMALLOC = no
+
 srcdir = .
 exec_prefix = /usr/local
 bindir = $(exec_prefix)/bin
@@ -23,11 +25,15 @@ BASE_GLOBS = $(addsuffix /*.c,$(SRC_DIRS))
 ARCH_GLOBS = $(addsuffix /$(ARCH)/*.[csS],$(SRC_DIRS))
 BASE_SRCS = $(sort $(wildcard $(BASE_GLOBS)))
 ARCH_SRCS = $(sort $(wildcard $(ARCH_GLOBS)))
+
+ifeq ($(USE_MIMALLOC),yes)
+BASE_SRCS := $(filter-out $(srcdir)/src/malloc/%,$(BASE_SRCS))
+endif
+
 BASE_OBJS = $(patsubst $(srcdir)/%,%.o,$(basename $(BASE_SRCS)))
 ARCH_OBJS = $(patsubst $(srcdir)/%,%.o,$(basename $(ARCH_SRCS)))
 REPLACED_OBJS = $(sort $(subst /$(ARCH)/,/,$(ARCH_OBJS)))
 ALL_OBJS = $(addprefix obj/, $(filter-out $(REPLACED_OBJS), $(sort $(BASE_OBJS) $(ARCH_OBJS))))
-
 LIBC_OBJS = $(filter obj/src/%,$(ALL_OBJS)) $(filter obj/compat/%,$(ALL_OBJS))
 LDSO_OBJS = $(filter obj/ldso/%,$(ALL_OBJS:%.o=%.lo))
 CRT_OBJS = $(filter obj/crt/%,$(ALL_OBJS))
@@ -159,12 +165,22 @@ obj/%.lo: $(srcdir)/%.c $(GENH) $(IMPH)
 	$(CC_CMD)
 
 lib/libc.so: $(LOBJS) $(LDSO_OBJS)
+ifeq ($(USE_MIMALLOC),yes)
 	$(CC) $(CFLAGS_ALL) $(LDFLAGS_ALL) -nostdlib -shared \
-	-Wl,-e,_dlstart -o $@ $(LOBJS) $(LDSO_OBJS) $(LIBCC)
+	-Wl,-e,_dlstart -o $@  $(shell find ./mimalloc -name '*.o') $(LOBJS) $(LDSO_OBJS) $(LIBCC)
+endif
+ifeq ($(USE_MIMALLOC),no)
+	$(CC) $(CFLAGS_ALL) $(LDFLAGS_ALL) -nostdlib -shared \
+	-Wl,-e,_dlstart -o $@  $(LOBJS) $(LDSO_OBJS) $(LIBCC)
+endif
 
 lib/libc.a: $(AOBJS)
 	rm -f $@
+ifeq ($(USE_MIMALLOC),yes)
+	$(AR) rc $@ $(shell find ./mimalloc -name '*.o') $(AOBJS)
+else
 	$(AR) rc $@ $(AOBJS)
+endif
 	$(RANLIB) $@
 
 $(EMPTY_LIBS):
