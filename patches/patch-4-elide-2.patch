@@ -1,0 +1,16 @@
+--- a/Makefile
++++ b/Makefile
+@@ -24,6 +24,13 @@ ARCH_SRCS = $(sort $(wildcard $(ARCH_GLOBS)))
+ 
+ ifeq ($(USE_MIMALLOC),yes)
+ BASE_SRCS := $(filter-out $(srcdir)/src/malloc/%,$(BASE_SRCS))
++# Also exclude functions that mimalloc-musl-glue.c provides to avoid
++# multiple definition errors:
++#   - valloc (provided by glue, conflicts with src/legacy/valloc.c)
++#   - strdup (provided by glue, conflicts with src/string/strdup.c)
++#   - strndup (provided by glue, conflicts with src/string/strndup.c)
++BASE_SRCS := $(filter-out $(srcdir)/src/legacy/valloc.c,$(BASE_SRCS))
++BASE_SRCS := $(filter-out $(srcdir)/src/string/strdup.c $(srcdir)/src/string/strndup.c,$(BASE_SRCS))
+ endif
+ 
+ BASE_OBJS = $(patsubst $(srcdir)/%,%.o,$(basename $(BASE_SRCS)))
